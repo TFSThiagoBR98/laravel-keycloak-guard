@@ -8,7 +8,6 @@ use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Http\Request;
 use KeycloakGuard\Exceptions\ResourceAccessNotAllowedException;
 use KeycloakGuard\Exceptions\TokenException;
-use KeycloakGuard\Exceptions\UserNotFoundException;
 
 class KeycloakGuard implements Guard
 {
@@ -153,6 +152,7 @@ class KeycloakGuard implements Guard
         $this->validateResources();
 
         if ($this->config['load_user_from_database']) {
+            $userClass = app($this->config['user_model']);
             $methodOnProvider = $this->config['user_provider_custom_retrieve_method'] ?? null;
 
             if ($methodOnProvider) {
@@ -161,8 +161,24 @@ class KeycloakGuard implements Guard
                 $user = $this->provider->retrieveByCredentials($credentials);
             }
 
+            $name = $this->decodedToken['name'] ?? $this->decodedToken['preferred_username'];
+            $tax_id = $this->decodedToken['username'];
+            $email = $this->decodedToken['email'];
+            $email_verified = $this->decodedToken['email_verified'] ?? false;
             if (!$user) {
-                throw new UserNotFoundException("User not found. Credentials: ".json_encode($credentials));
+                $user = $userClass->create([
+                    'name' => $name,
+                    'tax_id' => $tax_id,
+                    'email' => $email,
+                    'email_verified_at' => $email_verified ? now() : null,
+                    'password' => bcrypt(uniqid()),
+                ]);
+            } else {
+                $user->update([
+                    'name' => $name,
+                    'email_verified_at' => $email_verified ? now() : null,
+                ]);
+                $user->refresh();
             }
         } else {
             $class = $this->provider->getModel();

@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'user_model' => \App\Models\User::class,
+
     'realm_public_key' => env('KEYCLOAK_REALM_PUBLIC_KEY', null),
 
     'token_encryption_algorithm' => env('KEYCLOAK_TOKEN_ENCRYPTION_ALGORITHM', 'RS256'),
