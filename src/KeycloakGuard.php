@@ -6,6 +6,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use KeycloakGuard\Exceptions\ResourceAccessNotAllowedException;
 use KeycloakGuard\Exceptions\TokenException;
 
@@ -152,6 +153,7 @@ class KeycloakGuard implements Guard
         $this->validateResources();
 
         if ($this->config['load_user_from_database']) {
+            /** @var \Illuminate\Database\Eloquent\Model */
             $userClass = app($this->config['user_model']);
             $methodOnProvider = $this->config['user_provider_custom_retrieve_method'] ?? null;
 
@@ -161,15 +163,16 @@ class KeycloakGuard implements Guard
                 $user = $this->provider->retrieveByCredentials($credentials);
             }
 
-            $name = $this->decodedToken['name'] ?? $this->decodedToken['preferred_username'];
-            $tax_id = $this->decodedToken['username'];
-            $email = $this->decodedToken['email'];
-            $email_verified = $this->decodedToken['email_verified'] ?? false;
+            $name = $this->decodedToken->name ?? $this->decodedToken->preferred_username;
+            $tax_id = $this->decodedToken->preferred_username;
+            $email = $this->decodedToken->email;
+            $email_verified = $this->decodedToken->email_verified ?? false;
             if (!$user) {
-                $user = $userClass->create([
+                $user = $userClass->firstOrCreate([
+                    'email' => $email,
+                ], [
                     'name' => $name,
                     'tax_id' => $tax_id,
-                    'email' => $email,
                     'email_verified_at' => $email_verified ? now() : null,
                     'password' => bcrypt(uniqid()),
                 ]);
