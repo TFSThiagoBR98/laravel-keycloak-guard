@@ -165,7 +165,7 @@ class KeycloakGuard implements Guard
 
             $name = $this->decodedToken->name ?? $this->decodedToken->preferred_username;
             $tax_id = $this->decodedToken->preferred_username;
-            $email = $this->decodedToken->email;
+            $email = $this->decodedToken->email ?? $this->decodedToken->client_id;
             $email_verified = $this->decodedToken->email_verified ?? false;
             if (!$user) {
                 $user = $userClass->firstOrCreate([
